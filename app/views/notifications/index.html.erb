@@ -1,0 +1,322 @@
+<div class="stats-section">
+  <h2>📊 Statistiques</h2>
+  <div id="stats-content">
+    <button id="refresh-stats-btn" class="btn btn-secondary">Actualiser les statistiques</button>
+  </div>
+</div>
+
+<div class="cleanup-section">
+  <h2>🧹 Maintenance</h2>
+  <button id="cleanup-btn" class="btn btn-warning">
+    Nettoyer les notifications invalides
+  </button>
+  <div id="cleanup-result" class="result-message" style="display: none; margin-top: 10px;"></div>
+</div>
+
+<div class="notification-section">
+  <h2>📨 Envoyer une notification</h2>
+
+  <div class="form-group">
+    <label for="notification-message">Message de la notification :</label>
+    <input type="text" id="notification-message" placeholder="Entrez votre message..." value="Notification de test depuis votre application !">
+  </div>
+
+  <button id="send-notification-btn" class="btn btn-primary">
+    Envoyer la notification
+  </button>
+
+  <div id="notification-result" class="result-message" style="display: none; margin-top: 10px;"></div>
+</div>
+
+<%= console %>
+
+<style>
+  .stats-section, .cleanup-section, .notification-section {
+    width: 100%;
+    max-width: none;
+    margin: 15px 0;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .stats-content {
+    margin-top: 10px;
+  }
+
+  .stats-display {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    font-family: monospace;
+    font-size: 14px;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ced4da;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+  }
+
+  .form-group input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 15px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s;
+    margin-bottom: 10px;
+    text-align: center;
+    display: block;
+  }
+
+  .btn-primary {
+    background-color: #007bff;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background-color: #545b62;
+    transform: translateY(-1px);
+  }
+
+  .btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+  }
+
+  .btn-warning:hover {
+    background-color: #e0a800;
+    transform: translateY(-1px);
+  }
+
+  .btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .result-message {
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: 500;
+    margin-top: 15px;
+    white-space: pre-line;
+  }
+
+  .success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+
+  .error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+
+  .warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+  }
+
+  /* Responsive pour très petits écrans */
+  @media (max-width: 480px) {
+    .stats-section, .cleanup-section, .notification-section {
+      margin: 10px 0;
+      padding: 15px;
+    }
+
+    .btn {
+      padding: 12px 15px;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      padding: 10px;
+      font-size: 14px;
+    }
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sendBtn = document.getElementById('send-notification-btn');
+    const messageInput = document.getElementById('notification-message');
+    const resultDiv = document.getElementById('notification-result');
+    const refreshStatsBtn = document.getElementById('refresh-stats-btn');
+    const statsContent = document.getElementById('stats-content');
+    const cleanupBtn = document.getElementById('cleanup-btn');
+    const cleanupResult = document.getElementById('cleanup-result');
+
+    // Charger les statistiques au démarrage
+    loadStats();
+
+    // Gestionnaire pour l'envoi de notifications
+    sendBtn.addEventListener('click', async function() {
+      const message = messageInput.value.trim();
+
+      if (!message) {
+        showResult('Veuillez entrer un message', false, resultDiv);
+        return;
+      }
+
+      // Désactiver le bouton pendant l'envoi
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Envoi en cours...';
+
+      try {
+        const response = await fetch('/notifications/send_notification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ message: message })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          let message = data.message;
+          if (data.errors && data.errors.length > 0) {
+            message += '\nErreurs: ' + data.errors.join(', ');
+            showResult(message, false, resultDiv);
+          } else {
+            showResult(message, true, resultDiv);
+          }
+          // Actualiser les statistiques après l'envoi
+          loadStats();
+        } else {
+          showResult(data.message + (data.errors && data.errors.length > 0 ? '\nErreurs: ' + data.errors.join(', ') : ''), false, resultDiv);
+        }
+      } catch (error) {
+        showResult('Erreur lors de l\'envoi: ' + error.message, false, resultDiv);
+      } finally {
+        // Réactiver le bouton
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Envoyer la notification';
+      }
+    });
+
+    // Gestionnaire pour actualiser les statistiques
+    refreshStatsBtn.addEventListener('click', loadStats);
+
+    // Gestionnaire pour le nettoyage
+    cleanupBtn.addEventListener('click', async function() {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer toutes les notifications invalides ?')) {
+        return;
+      }
+
+      cleanupBtn.disabled = true;
+      cleanupBtn.textContent = 'Nettoyage en cours...';
+
+      try {
+        const response = await fetch('/notifications/cleanup', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          }
+        });
+
+        const data = await response.json();
+        showResult(data.message + ` (${data.remaining_count} notifications restantes)`, true, cleanupResult);
+
+        // Actualiser les statistiques après le nettoyage
+        loadStats();
+      } catch (error) {
+        showResult('Erreur lors du nettoyage: ' + error.message, false, cleanupResult);
+      } finally {
+        cleanupBtn.disabled = false;
+        cleanupBtn.textContent = 'Nettoyer les notifications invalides';
+      }
+    });
+
+    // Fonction pour charger les statistiques
+    async function loadStats() {
+      try {
+        const response = await fetch('/notifications/stats');
+        const data = await response.json();
+
+        const statsHtml = `
+          <div class="stats-display">
+            <strong>Statistiques des notifications:</strong><br>
+            Total: ${data.total_notifications}<br>
+            Valides: ${data.valid_notifications}<br>
+            Invalides: ${data.invalid_notifications}
+          </div>
+          <button id="refresh-stats-btn" class="btn btn-secondary">Actualiser les statistiques</button>
+        `;
+
+        statsContent.innerHTML = statsHtml;
+
+        // Réattacher l'événement au nouveau bouton
+        document.getElementById('refresh-stats-btn').addEventListener('click', loadStats);
+
+      } catch (error) {
+        console.error('Erreur lors du chargement des statistiques:', error);
+      }
+    }
+
+    function showResult(message, isSuccess, targetDiv) {
+      targetDiv.style.display = 'block';
+      targetDiv.textContent = message;
+
+      // Déterminer la classe appropriée
+      let className = 'result-message ';
+      if (isSuccess) {
+        className += 'success';
+      } else if (message.includes('Erreurs:')) {
+        className += 'warning';
+      } else {
+        className += 'error';
+      }
+
+      targetDiv.className = className;
+
+      // Masquer le message après 5 secondes
+      setTimeout(() => {
+        targetDiv.style.display = 'none';
+      }, 5000);
+    }
+  });
+</script>

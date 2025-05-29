@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Notifications" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="vapid-public-key" content="<%= Base64.urlsafe_decode64(Rails.application.credentials.dig(:vapid_public_key)).bytes.to_json %>">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+
+    <style>
+      /* Styles pour Capacitor/Mobile */
+      body {
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .mobile-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 100;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 20px;
+      }
+
+      .mobile-container {
+        max-width: 100%;
+        padding: 0 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="mobile-container">
+      <div class="mobile-header">
+        <h1 style="margin: 0; color: #333;">📱 Notifications</h1>
+      </div>
+      <%= yield %>
+    </div>
+  </body>
+</html>
